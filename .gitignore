@@ -1,0 +1,23 @@
+# python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# secrets & local config
+.env
+.env.local
+
+# playwright / pytest output
+test-results/
+playwright-report/
+videos/
+traces/
+
+# auth storage state (содержит токены — в git не место)
+.auth/
+
+*.log

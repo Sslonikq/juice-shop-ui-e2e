@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+    "smoke: базовая проверка, что приложение доступно и отвечает",
+]
