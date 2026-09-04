@@ -170,13 +170,15 @@ checkout → setup Python → pip install -r requirements.txt → playwright ins
 2. Juice Shop local env (v20.2.0 в Docker) ✅
 3. Smoke-тест — первый рабочий прогон, минимум абстракций
 4. Page Objects + Component Objects — по мере надобности, не авансом
-5. Login UI test — целиком через UI, **без** API-клиента
-6. ApiClient — пишется здесь, когда появился первый настоящий потребитель
+5. ApiClient — минимальный, только регистрация пользователя: появился первый потребитель
+6. Login UI test — **сценарий** целиком через UI, пользователь для него создаётся через API
 7. API auth bypass (storage state)
 8. Purchase E2E — API auth + UI purchase
 9. Fluent API → cross-browser → reporting/trace → CI → hardening
 
-Порядок не косметический: `ApiClient` появляется **после** Login UI test, а не до. Login UI test по определению не имеет права ходить в API, его первый реальный потребитель — auth bypass в Purchase E2E. Написать клиент раньше — построить слой до появления нужды, что запрещено разделом «Процесс добавления фичи».
+Граница проходит не по тесту, а по роли действия: **сценарий — через UI, предусловие — через API**. Login UI test заполняет форму кликами (это проверяемое поведение), но пользователя для него регистрирует API-фикстура (это setup). Регистрировать через UI значило бы проверять в одном тесте две функции сразу и валить login-тест из-за поломки в регистрации.
+
+`ApiClient` пишется не авансом: на шаге 5 у него ровно один метод, потому что нужен ровно один. Остальные добавляются, когда появляются потребители.
 
 Вне скоупа: Selenium/Cypress, TypeScript/JS-стек, `unittest` вместо `pytest`, монолитный Page Object, полноценный security/pentesting-фреймворк, автоматизация hacking challenges Juice Shop, эксплуатация уязвимостей как цель automation, load/performance testing, полноценный visual regression (если не запрошен отдельно), LLM/AI-слой, интеграция с БД без конкретной нужды, произвольные сторонние сервисы.
 
