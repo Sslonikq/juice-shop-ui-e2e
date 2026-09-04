@@ -4,4 +4,5 @@ pythonpath = ["."]
 addopts = "-ra --strict-markers"
 markers = [
     "smoke: базовая проверка, что приложение доступно и отвечает",
+    "auth: сценарии авторизации через UI",
 ]
