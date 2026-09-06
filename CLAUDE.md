@@ -74,6 +74,8 @@ tests/
   e2e/test_purchase.py     — покупка: API auth + UI purchase flow
   smoke/test_smoke.py
 pyproject.toml / requirements.txt / .env.example / .gitignore
+docker-compose.yml           — Juice Shop с зафиксированным тегом и healthcheck
+.github/workflows/ci.yml     — lint/typecheck + матрица браузеров
 ```
 Целевая структура, не обязательный список файлов — abstraction layer не создаётся до реальной потребности.
 
@@ -89,12 +91,16 @@ pyproject.toml / requirements.txt / .env.example / .gitignore
 
 Juice Shop локально — **версия зафиксирована**, `latest` не использовать: новые релизы (например редизайн storefront в v20.0.0) ломают UI-контракты без единого изменения в тестах.
 
+Тег образа и ожидание готовности живут в `docker-compose.yml` — одним источником и для локального запуска, и для CI:
+
 ```bash
-docker run -d --rm -p 3000:3000 --name juice-shop bkimminich/juice-shop:v20.2.0
-curl http://localhost:3000/rest/admin/application-version   # {"version":"20.2.0"}
+docker compose up -d --force-recreate --wait   # поднять и дождаться healthy
+docker compose down                            # погасить и удалить контейнер
 ```
 
-`--rm` — осознанно, и локально тоже. Juice Shop мутирует своё состояние во время прогона (пользователи, корзины, заказы пишутся в SQLite внутри контейнера). Переживший остановку контейнер стартует с загрязнённой базы: накопленные тестовые юзеры, чужие корзины, разобранные `Only 1 left` товары — и прогон N+1 отличается от прогона N без единого изменения в коде. Пересоздание стоит секунды, образ уже в кэше.
+`--wait` опирается на healthcheck из compose-файла. Образ distroless: внутри нет ни `sh`, ни `curl`, поэтому проба написана на `/nodejs/bin/node` по абсолютному пути и дёргает `/rest/admin/application-version`.
+
+`--force-recreate` — осознанно, и локально тоже. Juice Shop мутирует своё состояние во время прогона (пользователи, корзины, заказы пишутся в SQLite внутри контейнера). Переживший остановку контейнер стартует с загрязнённой базы: накопленные тестовые юзеры, чужие корзины, разобранные `Only 1 left` товары — и прогон N+1 отличается от прогона N без единого изменения в коде. Пересоздание стоит секунды, образ уже в кэше.
 
 ## API Juice Shop
 
@@ -136,11 +142,19 @@ Credentials — никогда в тестах/Page Object/фикстурах/gi
 
 ## CI
 
+`.github/workflows/ci.yml`, два job'а:
+
 ```
-checkout → setup Python → pip install -r requirements.txt → playwright install --with-deps
-  → start Juice Shop (зафиксированный тег) → wait until ready → lint → typecheck → pytest
-  → upload report/trace/screenshots
+quality:  checkout → setup Python → pip install → ruff check → ruff format --check → mypy
+e2e:      needs quality, матрица [chromium, firefox, webkit]
+          checkout → setup Python → pip install → playwright install --with-deps <browser>
+            → docker compose up -d --wait → pytest --browser <browser>
+            → upload allure-results (always) + test-results (on failure)
 ```
+
+Матрица, а не один прогон с тремя `--browser`: упавший браузер видно по имени job'а, `fail-fast: false` не глушит остальные. Lint и typecheck — отдельным job'ом: они не требуют браузеров и отсекают мусорные PR за секунды.
+
+`BASE_URL` в CI задаётся через `env`, а не через `.env`: файл не коммитится, а `load_dotenv` не перетирает уже выставленные переменные окружения.
 При падении теста должны быть доступны trace + screenshot (+video при включении) — чтобы понять, что делал тест, где упал и на каком локаторе/действии. Включается флагами `pytest-playwright`: `--tracing retain-on-failure --screenshot only-on-failure`.
 
 ## Особенности UI Juice Shop v20.2.0
@@ -184,13 +198,14 @@ checkout → setup Python → pip install -r requirements.txt → playwright ins
 
 1. Python+pytest+Playwright setup ✅
 2. Juice Shop local env (v20.2.0 в Docker) ✅
-3. Smoke-тест — первый рабочий прогон, минимум абстракций
-4. Page Objects + Component Objects — по мере надобности, не авансом
-5. ApiClient — минимальный, только регистрация пользователя: появился первый потребитель
-6. Login UI test — **сценарий** целиком через UI, пользователь для него создаётся через API
-7. API auth bypass (storage state)
-8. Purchase E2E — API auth + UI purchase
-9. Fluent API → cross-browser → reporting/trace → CI → hardening
+3. Smoke-тест — первый рабочий прогон, минимум абстракций ✅
+4. Page Objects + Component Objects — по мере надобности, не авансом ✅
+5. ApiClient — минимальный, только регистрация пользователя: появился первый потребитель ✅
+6. Login UI test — **сценарий** целиком через UI, пользователь для него создаётся через API ✅
+7. API auth bypass (storage state) ✅
+8. Purchase E2E — API auth + UI purchase ✅
+9. Fluent API ✅ → cross-browser ✅ (12 passed, правок не потребовалось) → reporting/trace ✅ (Allure) → CI → hardening
+10. README — пишется последним, по факту сделанного
 
 Граница проходит не по тесту, а по роли действия: **сценарий — через UI, предусловие — через API**. Login UI test заполняет форму кликами (это проверяемое поведение), но пользователя для него регистрирует API-фикстура (это setup). Регистрировать через UI значило бы проверять в одном тесте две функции сразу и валить login-тест из-за поломки в регистрации.
 
