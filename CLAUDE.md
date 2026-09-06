@@ -109,6 +109,10 @@ Namespace не делится по смыслу — префикс нужно з
 | `GET/POST /rest/basket/{id}` | корзина |
 | `GET/POST /api/Addresss` | адреса (в приложении реально три `s`) |
 | `GET /rest/admin/application-version` | версия приложения |
+| `POST /api/Addresss` | адрес доставки (`fullName`, `mobileNum`, `zipCode`, `streetAddress`, `city`, `state`, `country`) |
+| `POST /api/Cards` | платёжная карта (`fullName`, `cardNum`, `expMonth`, `expYear`) |
+
+Sequelize молча игнорирует поля с неизвестными именами: запрос вернёт 201, а в базе окажутся `null`. Ошибка всплывёт через два экрана в UI-тесте. Имена полей в `ApiClient` сверять с реальным запросом из DevTools, а не с логикой.
 
 Поэтому в env только `BASE_URL`; `/rest` и `/api` — забота `ApiClient`, а не конфигурации. Переменной `API_URL` быть не должно: она создаёт иллюзию единого префикса, которого нет.
 
@@ -138,6 +142,18 @@ checkout → setup Python → pip install -r requirements.txt → playwright ins
   → upload report/trace/screenshots
 ```
 При падении теста должны быть доступны trace + screenshot (+video при включении) — чтобы понять, что делал тест, где упал и на каком локаторе/действии. Включается флагами `pytest-playwright`: `--tracing retain-on-failure --screenshot only-on-failure`.
+
+## Особенности UI Juice Shop v20.2.0
+
+Найдено разведкой, экономит часы отладки:
+
+- **Состояние авторизации** — `localStorage.token` + cookie `token` + **`sessionStorage.bid`** (id корзины). `storage_state` Playwright не умеет `sessionStorage`, поэтому оба хранилища заполняются через `add_init_script` до первой навигации. Без `bid` пользователь выглядит вошедшим, но корзина не работает.
+- **Баннеры закрываются cookies**: `welcomebanner_status=dismiss`, `cookieconsent_status=dismiss`. Без них два диалога перекрывают страницу и клики падают по таймауту. `language=en` убирает всплывашку внизу экрана, которая перехватывает клики на checkout.
+- **`aria-label` перебивает видимый текст.** Кнопка с надписью «Place your order and pay» ищется по имени `Complete your purchase`. Имя проверять в DevTools → Accessibility, а не по надписи.
+- **Названия кнопок не соответствуют маршруту**: на экране адреса кнопка «Proceed to payment selection» ведёт на выбор доставки. Маршрут определять по фактическому URL.
+- **Выбор строки в таблицах — только `radio.check()`.** Клик по строке не выбирает её, и кнопка «Proceed» остаётся `disabled`.
+- **После «Add to Basket» дождаться `simple-snack-bar`.** Переход в корзину без ожидания даёт пустую корзину и отключённый Checkout.
+- **`get_by_role(name=...)` совпадает по подстроке**: `name="Login"` цепляет и «Login with Google». Для точного совпадения — `exact=True`.
 
 ## Кросс-браузер
 

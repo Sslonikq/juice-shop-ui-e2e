@@ -14,8 +14,6 @@ def test_login(storefront: Page, registered_user: User) -> None:
     page.get_by_label("Text field for the login password").fill(registered_user.password)
     page.get_by_role("button", name="Login", exact=True).click()
 
-    # Вход завершается редиректом; без ожидания клик по меню попадёт в
-    # ещё анонимную страницу, и меню схлопнется при переходе.
     expect(page).to_have_url(f"{BASE_URL}/#/search")
 
     page.get_by_label("Show/hide account menu").click()
