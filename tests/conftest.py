@@ -1,6 +1,5 @@
 import json
 from collections.abc import Iterator
-from typing import Any
 
 import pytest
 from playwright.sync_api import APIRequestContext, BrowserContext, Page, Playwright
@@ -13,15 +12,15 @@ from src.factories.user_factory import UserFactory
 from src.models.auth_session import AuthSession
 from src.models.user import User
 
-BANNER_COOKIES: list[dict[str, Any]] = [
-    {"name": "welcomebanner_status", "value": "dismiss", "url": BASE_URL},
-    {"name": "cookieconsent_status", "value": "dismiss", "url": BASE_URL},
-    {"name": "language", "value": "en", "url": BASE_URL},
-]
-
 
 def _dismiss_banners(context: BrowserContext) -> None:
-    context.add_cookies(BANNER_COOKIES)
+    context.add_cookies(
+        [
+            {"name": "welcomebanner_status", "value": "dismiss", "url": BASE_URL},
+            {"name": "cookieconsent_status", "value": "dismiss", "url": BASE_URL},
+            {"name": "language", "value": "en", "url": BASE_URL},
+        ]
+    )
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
 import pytest
 from playwright.sync_api import Page
 
-from src.pages.home_page import HomePage
 from src.models.user import User
+from src.pages.home_page import HomePage
 
 
 @pytest.mark.auth
