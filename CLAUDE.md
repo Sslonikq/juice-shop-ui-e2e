@@ -75,7 +75,7 @@ tests/
   smoke/test_smoke.py
 pyproject.toml / requirements.txt / .env.example / .gitignore
 docker-compose.yml           — Juice Shop с зафиксированным тегом и healthcheck
-.github/workflows/ci.yml     — lint/typecheck + матрица браузеров
+.github/workflows/ci.yml     — lint/typecheck + матрица браузеров + публикация отчёта
 ```
 Целевая структура, не обязательный список файлов — abstraction layer не создаётся до реальной потребности.
 
@@ -135,9 +135,8 @@ pytest
 `.env` (не коммитится) / `.env.example` (коммитится):
 ```
 BASE_URL=http://localhost:3000
-TEST_USER_EMAIL=
-TEST_USER_PASSWORD=
 ```
+Статического тестового пользователя в конфиге нет и быть не должно: пользователи создаются фабрикой на лету, а пустая переменная в примере конфига — ловушка для следующего, кто станет искать, где взять её значение.
 Credentials — никогда в тестах/Page Object/фикстурах/git/скриншотах/логах.
 
 ## CI
@@ -211,7 +210,7 @@ report:   needs e2e, if !cancelled() && needs.e2e.result != 'skipped'
 6. Login UI test — **сценарий** целиком через UI, пользователь для него создаётся через API ✅
 7. API auth bypass (storage state) ✅
 8. Purchase E2E — API auth + UI purchase ✅
-9. Fluent API ✅ → cross-browser ✅ (12 passed, правок не потребовалось) → reporting/trace ✅ (Allure) → CI → hardening
+9. Fluent API ✅ → cross-browser ✅ (12 passed, правок не потребовалось) → reporting/trace ✅ (Allure) → CI ✅ (три job'а, отчёт публикуется на GitHub Pages) → hardening
 10. README — пишется последним, по факту сделанного
 
 Граница проходит не по тесту, а по роли действия: **сценарий — через UI, предусловие — через API**. Login UI test заполняет форму кликами (это проверяемое поведение), но пользователя для него регистрирует API-фикстура (это setup). Регистрировать через UI значило бы проверять в одном тесте две функции сразу и валить login-тест из-за поломки в регистрации.
