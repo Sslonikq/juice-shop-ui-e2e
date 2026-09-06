@@ -142,7 +142,7 @@ Credentials — никогда в тестах/Page Object/фикстурах/gi
 
 ## CI
 
-`.github/workflows/ci.yml`, два job'а:
+`.github/workflows/ci.yml`, три job'а:
 
 ```
 quality:  checkout → setup Python → pip install → ruff check → ruff format --check → mypy
@@ -150,9 +150,16 @@ e2e:      needs quality, матрица [chromium, firefox, webkit]
           checkout → setup Python → pip install → playwright install --with-deps <browser>
             → docker compose up -d --wait → pytest --browser <browser>
             → upload allure-results (always) + test-results (on failure)
+report:   needs e2e, if !cancelled() && needs.e2e.result != 'skipped'
+          download allure-results-* (merge-multiple) → checkout gh-pages → подложить history
+            → allure generate → publish в gh-pages → upload allure-report (always)
 ```
 
 Матрица, а не один прогон с тремя `--browser`: упавший браузер видно по имени job'а, `fail-fast: false` не глушит остальные. Lint и typecheck — отдельным job'ом: они не требуют браузеров и отсекают мусорные PR за секунды.
+
+`report` отдельным job'ом, потому что публиковать надо один раз из результатов всех трёх браузеров — иначе job'ы матрицы начнут по очереди затирать друг друга в `gh-pages`. Условие `!cancelled()` даёт отчёт и по красному прогону, при этом `e2e` честно краснеет: глушить падение через `continue-on-error` не требуется. Проверка на `skipped` защищает от затирания хорошего отчёта пустым, когда `e2e` не запускался вовсе.
+
+Тренд Allure держится на папке `history` внутри опубликованного отчёта: её забирают из `gh-pages` и подкладывают в `allure-results` **после** прогона тестов — `--clean-alluredir` стёр бы её, случись это раньше. На первом прогоне ветки `gh-pages` ещё нет, поэтому шаг с checkout истории помечен `continue-on-error`, а копирование переживает отсутствие источника. График появляется со второго прогона.
 
 `BASE_URL` в CI задаётся через `env`, а не через `.env`: файл не коммитится, а `load_dotenv` не перетирает уже выставленные переменные окружения.
 При падении теста должны быть доступны trace + screenshot (+video при включении) — чтобы понять, что делал тест, где упал и на каком локаторе/действии. Включается флагами `pytest-playwright`: `--tracing retain-on-failure --screenshot only-on-failure`.
