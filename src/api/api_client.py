@@ -1,6 +1,8 @@
 from playwright.sync_api import APIRequestContext
 
+from src.models.address import Address
 from src.models.auth_session import AuthSession
+from src.models.payment_card import PaymentCard
 
 
 class ApiClient:
@@ -42,3 +44,40 @@ class ApiClient:
             token=authentication["token"],
             basket_id=str(authentication["bid"]),
         )
+
+    def create_address(self, address: Address, token: str) -> None:
+        response = self._request.post(
+            "/api/Addresss",
+            data={
+                "fullName": address.full_name,
+                "mobileNum": address.mobile_number,
+                "zipCode": address.zip_code,
+                "streetAddress": address.street_address,
+                "city": address.city,
+                "state": address.state,
+                "country": address.country,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if not response.ok:
+            raise RuntimeError(
+                f"Address creation failed: POST /api/Addresss -> "
+                f"{response.status} {response.text()}"
+            )
+
+    def create_payment_card(self, card: PaymentCard, token: str) -> None:
+        response = self._request.post(
+            "/api/Cards",
+            data={
+                "fullName": card.full_name,
+                "cardNum": card.card_number,
+                "expMonth": card.expiry_month,
+                "expYear": card.expiry_year,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if not response.ok:
+            raise RuntimeError(
+                f"Card creation failed: POST /api/Cards -> "
+                f"{response.status} {response.text()}"
+            )
