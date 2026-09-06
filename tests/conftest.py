@@ -1,8 +1,9 @@
 import json
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
-from playwright.sync_api import APIRequestContext, Page, Playwright
+from playwright.sync_api import APIRequestContext, BrowserContext, Page, Playwright
 
 from src.api.api_client import ApiClient
 from src.config.settings import BASE_URL
@@ -11,6 +12,16 @@ from src.factories.payment_card_factory import PaymentCardFactory
 from src.factories.user_factory import UserFactory
 from src.models.auth_session import AuthSession
 from src.models.user import User
+
+BANNER_COOKIES: list[dict[str, Any]] = [
+    {"name": "welcomebanner_status", "value": "dismiss", "url": BASE_URL},
+    {"name": "cookieconsent_status", "value": "dismiss", "url": BASE_URL},
+    {"name": "language", "value": "en", "url": BASE_URL},
+]
+
+
+def _dismiss_banners(context: BrowserContext) -> None:
+    context.add_cookies(BANNER_COOKIES)
 
 
 @pytest.fixture
@@ -39,9 +50,8 @@ def auth_session(api_client: ApiClient, registered_user: User) -> AuthSession:
 
 @pytest.fixture
 def storefront(page: Page) -> Page:
+    _dismiss_banners(page.context)
     page.goto(BASE_URL)
-    page.get_by_role("button", name="Close Welcome Banner").click()
-    page.get_by_role("button", name="dismiss cookie message").click()
     return page
 
 
@@ -49,13 +59,9 @@ def storefront(page: Page) -> Page:
 def authenticated_page(page: Page, auth_session: AuthSession) -> Page:
     context = page.context
 
+    _dismiss_banners(context)
     context.add_cookies(
-        [
-            {"name": "token", "value": auth_session.token, "url": BASE_URL},
-            {"name": "welcomebanner_status", "value": "dismiss", "url": BASE_URL},
-            {"name": "cookieconsent_status", "value": "dismiss", "url": BASE_URL},
-            {"name": "language", "value": "en", "url": BASE_URL},
-        ]
+        [{"name": "token", "value": auth_session.token, "url": BASE_URL}]
     )
     context.add_init_script(
         f"localStorage.setItem('token', {json.dumps(auth_session.token)});"

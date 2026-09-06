@@ -1,7 +1,9 @@
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+
+from src.pages.home_page import HomePage
 
 
 @pytest.mark.smoke
 def test_storefront_shows_products(storefront: Page) -> None:
-    expect(storefront.get_by_role("button", name="Add to Basket").first).to_be_visible()
+    HomePage(storefront).assert_products_visible()
