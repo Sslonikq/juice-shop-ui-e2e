@@ -1,3 +1,4 @@
+import allure
 import pytest
 from playwright.sync_api import Page
 
@@ -5,6 +6,8 @@ from src.models.user import User
 from src.pages.login_page import LoginPage
 
 
+@allure.feature("Авторизация")
+@allure.title("Пользователь входит в магазин через форму логина")
 @pytest.mark.auth
 def test_login(storefront: Page, registered_user: User) -> None:
     home_page = LoginPage(storefront).open().login_as(registered_user)

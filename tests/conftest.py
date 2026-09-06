@@ -1,6 +1,9 @@
 import json
-from collections.abc import Iterator
+import re
+from collections.abc import Generator, Iterator
+from pathlib import Path
 
+import allure
 import pytest
 from playwright.sync_api import APIRequestContext, BrowserContext, Page, Playwright
 
@@ -11,6 +14,38 @@ from src.factories.payment_card_factory import PaymentCardFactory
 from src.factories.user_factory import UserFactory
 from src.models.auth_session import AuthSession
 from src.models.user import User
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(
+    item: pytest.Item, call: pytest.CallInfo[None]
+) -> Generator[None, pytest.TestReport, pytest.TestReport]:
+    report = yield
+
+    if report.failed and report.when == "call":
+        page: Page | None = getattr(item, "funcargs", {}).get("page")
+        if page is not None:
+            allure.attach(
+                page.screenshot(full_page=True),
+                name="screenshot",
+                attachment_type=allure.attachment_type.PNG,
+            )
+
+    if report.when == "teardown":
+        _attach_trace(item)
+
+    return report
+
+
+def _slugify(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "-", value).strip("-").lower()
+
+
+def _attach_trace(item: pytest.Item) -> None:
+    output_dir = Path(item.config.getoption("--output"))
+    trace = output_dir / _slugify(item.nodeid) / "trace.zip"
+    if trace.exists():
+        allure.attach.file(str(trace), name="trace", extension="zip")
 
 
 def _dismiss_banners(context: BrowserContext) -> None:

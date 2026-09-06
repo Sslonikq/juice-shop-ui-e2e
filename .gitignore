@@ -17,6 +17,10 @@ playwright-report/
 videos/
 traces/
 
+# allure
+allure-results/
+allure-report/
+
 # auth storage state (содержит токены — в git не место)
 .auth/
 

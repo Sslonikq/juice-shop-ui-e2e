@@ -1,9 +1,12 @@
+import allure
 import pytest
 from playwright.sync_api import Page
 
 from src.pages.home_page import HomePage
 
 
+@allure.feature("Покупка")
+@allure.title("Покупатель оформляет заказ на товар из каталога")
 @pytest.mark.e2e
 @pytest.mark.purchase
 def test_purchase(buyer_page: Page) -> None:

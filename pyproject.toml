@@ -9,11 +9,19 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM"]
 python_version = "3.13"
 strict = true
 files = ["src", "tests"]
+disable_error_code = ["untyped-decorator", "no-untyped-call"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers"
+addopts = """
+    -ra
+    --strict-markers
+    --alluredir=allure-results
+    --clean-alluredir
+    --tracing=retain-on-failure
+    --screenshot=only-on-failure
+"""
 markers = [
     "smoke: базовая проверка, что приложение доступно и отвечает",
     "auth: сценарии авторизации через UI",
