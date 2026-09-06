@@ -1,6 +1,7 @@
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
+from src.pages.home_page import HomePage
 from src.models.user import User
 
 
@@ -8,9 +9,4 @@ from src.models.user import User
 def test_api_auth_bypass_opens_authenticated_session(
     authenticated_page: Page, registered_user: User
 ) -> None:
-    page = authenticated_page
-    page.get_by_label("Show/hide account menu").click()
-
-    account_menu = page.get_by_role("menu")
-    expect(account_menu.get_by_text(registered_user.email)).to_be_visible()
-
+    HomePage(authenticated_page).header.assert_logged_in_as(registered_user.email)
